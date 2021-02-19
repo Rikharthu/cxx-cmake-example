@@ -6,25 +6,25 @@ else ()
     set(TARGET_DIR "release")
 endif ()
 
-if(ENABLE_LTO)
-    set(RUST_FLAGS "-Clinker-plugin-lto" "-Clinker=clang-11" "-Clink-arg=-fuse-ld=lld-11")
-endif()
-
 set(RUST_PART_LIB "${CMAKE_CURRENT_BINARY_DIR}/${TARGET_DIR}/librust_part.a")
 
 set(RUST_PART_CXX "${CMAKE_CURRENT_BINARY_DIR}/rust_part.cpp")
 add_library(rust_part STATIC ${RUST_PART_CXX})
 add_custom_command(
-    OUTPUT ${RUST_PART_CXX}
-    COMMAND CARGO_TARGET_DIR=${CMAKE_CURRENT_BINARY_DIR} RUSTFLAGS="${RUST_FLAGS}" ${CARGO_CMD}
-    COMMAND cp ${CMAKE_CURRENT_BINARY_DIR}/cxxbridge/rust_part/src/lib.rs.cc ${RUST_PART_CXX}
-    COMMAND cp ${CMAKE_CURRENT_BINARY_DIR}/cxxbridge/rust_part/src/lib.rs.h ${CMAKE_CURRENT_BINARY_DIR}/rust_part.h
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        OUTPUT ${RUST_PART_CXX}
+        COMMAND CARGO_TARGET_DIR=${CMAKE_CURRENT_BINARY_DIR} RUSTFLAGS="${RUST_FLAGS}" ${CARGO_CMD}
+        COMMAND cp ${CMAKE_CURRENT_BINARY_DIR}/cxxbridge/rust_part/src/lib.rs.cc ${RUST_PART_CXX}
+        COMMAND cp ${CMAKE_CURRENT_BINARY_DIR}/cxxbridge/rust_part/src/lib.rs.h ${CMAKE_CURRENT_BINARY_DIR}/rust_part.h
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-target_link_libraries(rust_part pthread dl ${RUST_PART_LIB})
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
 
-add_test(NAME rust_part_test 
-    COMMAND cargo test
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+# This linking order matters!
+target_link_libraries(rust_part ${RUST_PART_LIB} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+
+add_test(NAME rust_part_test
+        COMMAND cargo test
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 
